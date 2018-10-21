@@ -1,0 +1,53 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+# Every Vagrant development environment requires a box. You can search for
+# boxes at https://atlas.hashicorp.com/search.
+BOX_IMAGE = "ubuntu/bionic64"
+#BOX_IMAGE = "generic/ubuntu1804"
+#BOX_IMAGE = "debian/stretch64"
+NODE_COUNT = 3
+
+Vagrant.configure("2") do |config|
+  config.vm.define "master" do |subconfig|
+    subconfig.vm.provider 'libvirt' do |v|
+      v.cpus = 3
+      v.memory = 4096
+    end
+    subconfig.vm.box = BOX_IMAGE
+    subconfig.disksize.size = '42G'
+    subconfig.vm.hostname = "master"
+    subconfig.vm.network "public_network", :type => "bridge", :mode => "bridge", :dev => "virbr42"
+
+
+    #subconfig.vm.network :public_network, :bridge => "virbr42"
+  end
+  
+  (1..NODE_COUNT).each do |i|
+    config.vm.define "node#{i}" do |subconfig|
+      subconfig.vm.provider 'libvirt' do |v|
+        v.cpus = 1
+        v.memory = 2048
+        v.mgmt_attach = 'false'
+        #v.management_network_name = "pxe_network"
+        #v.management_network_address = "10.0.0.0/24"
+        #v.management_network_mode = "nat"
+
+      end
+      subconfig.vm.box = BOX_IMAGE
+      subconfig.disksize.size = '23G'
+      subconfig.vm.hostname = "node#{i}"
+      subconfig.vm.network :public_network, :type => 'bridge', :mode => 'bridge', :dev => 'virbr42'
+      #subconfig.vm.network :public_network, :bridge => "virbr42"
+      #subconfig.vm.network :public_network, :public_network => "virbr42"
+
+    end
+  end
+  config.vm.network :public_network, :type => 'bridge', :mode => 'bridge', :dev => 'virbr42'
+
+  # Install avahi on all machines  
+  config.vm.provision "shell", inline: <<-SHELL
+    apt install -y python
+  SHELL
+end
+
